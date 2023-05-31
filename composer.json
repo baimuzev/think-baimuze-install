@@ -1,0 +1,30 @@
+{
+  "type": "composer-plugin",
+  "name": "baimuze/think-baimuze-install",
+  "license": "MIT",
+  "description": "Plugin Installer for Baimuze",
+  "authors": [
+    {
+      "name": "白沐泽",
+      "email": "3184123838@qq.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "baimuze\\install\\": "src"
+    }
+  },
+  "require": {
+    "php": ">=7.1",
+    "ext-json": "*",
+    "composer-plugin-api": "^1.0 || ^2.0 || *"
+  },
+  "require-dev": {
+    "composer/composer": "^1.0 || ^2.0"
+  },
+  "extra": {
+    "class": [
+      "baimuze\\install\\Service"
+    ]
+  }
+}

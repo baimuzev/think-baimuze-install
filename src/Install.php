@@ -1,0 +1,143 @@
+<?php
+
+
+namespace baimuze\install;
+
+
+use Composer\Installer\LibraryInstaller;
+use Composer\Package\PackageInterface;
+use Composer\Repository\InstalledRepositoryInterface;
+
+class Install extends LibraryInstaller
+{
+    //安装插件
+    public function install(InstalledRepositoryInterface $repo, PackageInterface $package)
+    {
+        return parent::install($repo, $package)->then(function () use ($package) {
+            $this->copyStaticFiles($package);
+            if (($extra = $package->getExtra()) && !empty($extra['plugin']['event'])) {
+                is_file('vendor/autoload.php') && require_once('vendor/autoload.php');
+                foreach ((array)$extra['plugin']['event'] as $event) if (class_exists($event)) {
+                    method_exists($event, 'onInstall') && $event::onInstall();
+                }
+            }
+        });
+    }
+
+    //卸载插件
+    public function uninstall(InstalledRepositoryInterface $repo, PackageInterface $package)
+    {
+        if (($extra = $package->getExtra()) && !empty($extra['plugin']['event'])) {
+            is_file('vendor/autoload.php') && require_once('vendor/autoload.php');
+            foreach ((array)$extra['plugin']['event'] as $event) if (class_exists($event)) {
+                method_exists($event, 'onRemove') && $event::onRemove();
+            }
+        }
+        return parent::uninstall($repo, $package);
+    }
+
+    //更新插件
+    public function update(InstalledRepositoryInterface $repo, PackageInterface $initial, PackageInterface $target)
+    {
+        if (is_dir($this->getInstallPath($target))) {
+            return parent::update($repo, $initial, $target)->then(function () use ($target) {
+                $this->copyStaticFiles($target);
+            });
+        } else {
+            return $this->install($repo, $target);
+        }
+    }
+
+    //是否安装
+    public function isInstalled(InstalledRepositoryInterface $repo, PackageInterface $package)
+    {
+        $extra = $package->getExtra();
+        if (empty($extra['plugin']['clear'])) {
+            return parent::isInstalled($repo, $package);
+        } else {
+            return true;
+        }
+    }
+
+    //获取安装目录
+    public function getInstallPath(PackageInterface $package)
+    {
+        if ($this->composer->getPackage()->getType() === 'project') {
+            $extra = $package->getExtra();
+            if (!empty($extra['plugin']['path'])) {
+                return $extra['plugin']['path'];
+            }
+        }
+        return parent::getInstallPath($package);
+    }
+
+    protected function copyStaticFiles(PackageInterface $package)
+    {
+        if ($this->composer->getPackage()->getType() === 'project') {
+            $extra = $package->getExtra();//获取拓展信息
+            $installPath = $this->getInstallPath($package);//获取安装路径
+            $this->io->write("\r  > Exec Plugin <info>{$package->getPrettyName()} </info> \033[K");//输出信息
+            // 初始化，若文件存在不进行操作
+            if (!empty($extra['plugin']['init'])) {
+                foreach ((array)$extra['plugin']['init'] as $source => $target) {
+                    if (!is_file($target) && is_file($sfile = $installPath . DIRECTORY_SEPARATOR . $source)) {
+                        $this->io->write("\r  > Init Source <info>{$source} </info>to <info>{$target} </info>");
+                        file_exists(dirname($target)) || mkdir(dirname($target), 0755, true);//若无创建
+                        $this->filesystem->copy($sfile, $target);//将文件复制到指定目录
+                    }
+                }
+            }
+            // 复制替换，无论是否存在都进行替换
+            if (!empty($extra['plugin']['copy'])) {
+                foreach ((array)$extra['plugin']['copy'] as $source => $target) {
+                    // 是否为绝对复制模式
+                    $isforce = $target[0] === '!' && file_exists($target = substr($target, 1));
+                    // 如果目标目录或其上级目录下存在 ignore 文件则跳过复制
+                    if (file_exists(dirname($target) . '/ignore') || file_exists(rtrim($target, '\\/') . "/ignore")) {
+                        $this->io->write("\r  > Skip Copy <info>{$source} </info>to <info>{$target} </info>");
+                        continue;
+                    }
+                    // 绝对复制时需要先删除目标文件或目录
+                    $action = 'Copy';
+                    if ($isforce && file_exists($target)) {
+                        $action = 'Push';
+                        if (is_file($target)) {
+                            $this->filesystem->unlink($target);
+                        } else {
+                            $this->filesystem->removeDirectoryPhp($target);
+                        }
+                    }
+                    // 执行复制操作，将原文件或目录复制到目标位置
+                    if (file_exists($sfile = $installPath . DIRECTORY_SEPARATOR . $source)) {
+                        $this->io->write("\r  > {$action} Source <info>{$source} </info>to <info>{$target} </info>");
+                        file_exists(dirname($target)) || mkdir(dirname($target), 0755, true);
+                        $this->filesystem->copy($sfile, $target);
+                    }
+                }
+            }
+            // 清理当前库的所有文件及信息
+            if (!empty($extra['plugin']['clear'])) {
+                $rootPath = dirname($this->vendorDir);
+                if (stripos($installPath, $rootPath) === 0) {
+                    $showPath = substr($installPath, strlen($rootPath) + 1);
+                } else {
+                    $showPath = $installPath;
+                }
+                try {
+                    $this->io->write("\r  > Clear Vendor <info>{$showPath} </info>");
+                    $this->filesystem->removeDirectoryPhp($installPath);
+                } catch (\Exception|\RuntimeException $exception) {
+                    $this->io->error("\r  > {$exception->getMessage()}");
+                }
+            }
+        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function supports(string $packageType)
+    {
+        return 'think-admin-plugin' === $packageType;
+    }
+}
