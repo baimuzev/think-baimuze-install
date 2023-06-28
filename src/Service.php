@@ -41,7 +41,7 @@ class Service implements PluginInterface
 
                 // 初始化服务配置
                 $services = file_exists($file = 'vendor/services.php') ? (array)include($file) : [];
-                if (!in_array($service = 'BaiMuZe\library\AppServer', $services)) {
+                if (!in_array($service = 'BaiMuZe\Admin\library\AppServer', $services)) {
                     $services = array_unique(array_merge($services, ['think\\migration\\Service', $service]));
                     @file_put_contents($file, '<?php' . PHP_EOL . 'return ' . var_export($services, true) . ';');
                 }
