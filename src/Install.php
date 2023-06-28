@@ -138,6 +138,6 @@ class Install extends LibraryInstaller
      */
     public function supports(string $packageType)
     {
-        return 'think-admin-plugin' === $packageType;
+        return 'baimuze-plugin' === $packageType;
     }
 }
