@@ -1,7 +1,7 @@
 {
   "type": "composer-plugin",
   "name": "baimuze/think-baimuze-install",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "description": "Plugin Installer for Baimuze",
   "authors": [
     {
@@ -11,12 +11,13 @@
   ],
   "autoload": {
     "psr-4": {
-      "baimuze\\install\\": "src"
+      "BaiMuZe\\Admin\\install\\": "src"
     }
   },
   "require": {
     "php": ">=7.1",
     "ext-json": "*",
+    "symfony/process": "^5.4 || ^6.0 || *",
     "composer-plugin-api": "^1.0 || ^2.0 || *"
   },
   "require-dev": {
@@ -24,7 +25,7 @@
   },
   "extra": {
     "class": [
-      "baimuze\\install\\Service"
+      "BaiMuZe\\Admin\\install\\Service"
     ]
   }
 }

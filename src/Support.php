@@ -1,7 +1,7 @@
 <?php
 
 
-namespace baimuze\install;
+namespace BaiMuZe\Admin\install;
 
 
 use Symfony\Component\Process\Process;
